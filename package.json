@@ -16,5 +16,26 @@
     "concurrently": "^10.0.6",
     "electron": "^45.2.1",
     "wait-on": "^9.5.1"
+  },
+  "dependencies": {
+    "electron-updater": "^6.8.11"
+  },
+  "build": {
+    "appId": "com.thedatadave.myapp",
+    "productName": "Smart Notes",
+    "publish": [
+      {
+        "provider": "github",
+        "owner": "TheDataDave",
+        "repo": "smart-notes"
+      }
+    ],
+    "win": {
+      "target": "nsis"
+    },
+    "nsis": {
+      "oneClick": false,
+      "allowToChangeInstallationDirectory": true
+    }
   }
 }

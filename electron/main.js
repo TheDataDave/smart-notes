@@ -1,6 +1,7 @@
 const { app, BrowserWindow, shell, Notification, Tray, Menu } = require('electron');
 const { makeTrayIcon } = require('./trayIcon');
 const path = require('node:path');
+const { autoUpdater } = require('electron-updater');
 
 const PORT = 4000;
 const isDev = process.argv.includes('--dev');
@@ -122,6 +123,9 @@ if (!app.requestSingleInstanceLock()) {
   app.on('second-instance', showWindow);
 
   app.whenReady().then(async () => {
+    if (app.isPackaged) {
+        autoUpdater.checkForUpdatesAndNotify();
+    }
     const { startServer } = await import('../server/index.js');
     server = await startServer({
       port: PORT,
