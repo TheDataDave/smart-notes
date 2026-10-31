@@ -1,0 +1,20 @@
+{
+  "name": "smart-notes",
+  "version": "1.0.0",
+  "description": "",
+  "main": "electron/main.js",
+  "scripts": {
+    "dev": "concurrently -k -n vite,electron \"npm --prefix client run dev\" \"wait-on http://localhost:5173 && electron . --dev\"",
+    "build:client": "npm --prefix client run build",
+    "start": "npm run build:client && electron ."
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "type": "commonjs",
+  "devDependencies": {
+    "concurrently": "^10.0.6",
+    "electron": "^45.2.1",
+    "wait-on": "^9.5.1"
+  }
+}
