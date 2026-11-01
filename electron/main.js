@@ -16,12 +16,36 @@ app.setAppUserModelId('com.smartnotes.app');
 
 const liveNotifications = new Set(); // keeps them from being garbage-collected before clicked
 
+// Auto-updater events - ensures that when updating/installing that we have a consistent state and don't leave a tray icon behind
+autoUpdater.on('before-quit-for-update', () => {
+  quitting = true;
+
+  if (tray && !tray.isDestroyed()) {
+    tray.destroy();
+    tray = null;
+  }
+});
+
 function showWindow() {
   if (!mainWindow || mainWindow.isDestroyed()) return;
   if (mainWindow.isMinimized()) mainWindow.restore();
   mainWindow.show();
   mainWindow.focus();
   mainWindow.flashFrame(false);
+}
+
+function quitApp() {
+  if (quitting) return;
+
+  quitting = true;
+
+  // Prevent future tray interaction.
+  if (tray && !tray.isDestroyed()) {
+    tray.destroy();
+    tray = null;
+  }
+
+  app.quit();
 }
 
 function createTray() {
@@ -42,12 +66,9 @@ function createTray() {
     });
   }
   items.push({
-    label: 'Quit',
-    click: () => {
-      quitting = true;
-      app.quit();
-    },
-  });
+  label: 'Quit',
+  click: quitApp,
+});
 
   tray.setContextMenu(Menu.buildFromTemplate(items));
   tray.on('click', showWindow);
@@ -149,6 +170,15 @@ if (!app.requestSingleInstanceLock()) {
 
   app.on('before-quit', () => {
     quitting = true;
-    server?.close();
+
+    if (tray && !tray.isDestroyed()) {
+      tray.destroy();
+      tray = null;
+    }
+
+    if (server) {
+      server.close();
+      server = null;
+    }
   });
 }

@@ -21,7 +21,7 @@
     "electron-updater": "^6.8.11"
   },
   "build": {
-    "appId": "com.thedatadave.myapp",
+    "appId": "com.smartnotes.app",
     "productName": "Smart Notes",
     "publish": [
       {
@@ -35,7 +35,9 @@
     },
     "nsis": {
       "oneClick": false,
-      "allowToChangeInstallationDirectory": true
+      "allowToChangeInstallationDirectory": true,
+      "createDesktopShortcut": true,
+      "createStartMenuShortcut": true
     }
   }
 }
