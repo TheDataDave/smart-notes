@@ -134,6 +134,7 @@ async function createWindow() {
     minWidth: 800,
     minHeight: 600,
     show: false,
+    title: `Smart Notes ${app.getVersion()}`,
     backgroundColor: '#ffffff',
     webPreferences: {
       preload: path.join(__dirname, 'preload.js'),
