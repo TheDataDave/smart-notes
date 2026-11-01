@@ -1,6 +1,6 @@
 {
   "name": "smart-notes",
-  "version": "1.0.2",
+  "version": "1.0.3",
   "description": "A desktop note-taking app built with Electron, Vite, and React.",
   "main": "electron/main.js",
   "scripts": {
