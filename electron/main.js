@@ -95,6 +95,38 @@ function handleReminder(r) {
   if (win && !win.isFocused()) win.flashFrame(true); // flash the taskbar button
 }
 
+// autoUpdater features for checking for updates and notifying the user. This is only relevant for packaged apps, not during development.
+function configureAutoUpdater() {
+  autoUpdater.autoDownload = true;
+  autoUpdater.autoInstallOnAppQuit = true;
+
+  autoUpdater.on('checking-for-update', () => {
+    console.log('[Updater] Checking for updates...');
+  });
+
+  autoUpdater.on('update-available', (info) => {
+    console.log('[Updater] Update available:', info.version);
+  });
+
+  autoUpdater.on('update-not-available', (info) => {
+    console.log('[Updater] Already up to date:', info.version);
+  });
+
+  autoUpdater.on('download-progress', (progress) => {
+    console.log(
+      `[Updater] Download progress: ${Math.round(progress.percent)}%`
+    );
+  });
+
+  autoUpdater.on('update-downloaded', (info) => {
+    console.log('[Updater] Update downloaded:', info.version);
+  });
+
+  autoUpdater.on('error', (error) => {
+    console.error('[Updater] Error:', error);
+  });
+}
+
 async function createWindow() {
   mainWindow = new BrowserWindow({
     width: 1400,
@@ -145,7 +177,11 @@ if (!app.requestSingleInstanceLock()) {
 
   app.whenReady().then(async () => {
     if (app.isPackaged) {
-        autoUpdater.checkForUpdatesAndNotify();
+      configureAutoUpdater();
+
+      autoUpdater.checkForUpdatesAndNotify().catch((error) => {
+        console.error('[Updater] Update check failed:', error);
+      });
     }
     const { startServer } = await import('../server/index.js');
     server = await startServer({

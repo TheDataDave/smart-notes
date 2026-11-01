@@ -1,7 +1,7 @@
 {
   "name": "smart-notes",
-  "version": "1.0.0",
-  "description": "",
+  "version": "1.0.1",
+  "description": "A desktop note-taking app built with Electron, Vite, and React.",
   "main": "electron/main.js",
   "scripts": {
     "dev": "concurrently -k -n vite,electron \"npm --prefix client run dev\" \"wait-on http://localhost:5173 && electron . --dev\"",
@@ -9,7 +9,7 @@
     "start": "npm run build:client && electron ."
   },
   "keywords": [],
-  "author": "",
+  "author": "TheDataDave",
   "license": "ISC",
   "type": "commonjs",
   "devDependencies": {
@@ -18,7 +18,8 @@
     "wait-on": "^9.5.1"
   },
   "dependencies": {
-    "electron-updater": "^6.8.11"
+    "electron-updater": "^6.8.11",
+    "express": "^5.3.0"
   },
   "build": {
     "appId": "com.smartnotes.app",
@@ -27,7 +28,8 @@
       {
         "provider": "github",
         "owner": "TheDataDave",
-        "repo": "smart-notes"
+        "repo": "smart-notes",
+        "releaseType": "release"
       }
     ],
     "win": {
