@@ -64,7 +64,7 @@ export function startServer({ port = 4000, dbPath, staticDir, onReminder } = {})
 
   crud('groups', 'groups', ['name', 'color', 'position']);
   crud('notes', 'notes', ['title', 'body', 'kind', 'group_id', 'position', 'due_at', 'completed']);
-  crud('reminders', 'reminders', ['note_id', 'remind_at', 'repeat', 'fired']);
+  crud('reminders', 'reminders', ['note_id', 'remind_at', 'repeat', 'fired', 'label']);
 
   // Toggle done/not done. Used by the confetti button.
   app.post('/api/notes/:id/complete', (req, res) => {
@@ -196,7 +196,7 @@ export function startServer({ port = 4000, dbPath, staticDir, onReminder } = {})
   function checkReminders() {
     const due = db
       .prepare(
-        `SELECT r.id, r.note_id, r.remind_at, r.repeat, n.title, n.body
+        `SELECT r.id, r.note_id, r.remind_at, r.repeat, r.label, n.title, n.body
         FROM reminders r JOIN notes n ON n.id = r.note_id
         WHERE r.fired = 0 AND r.remind_at <= ?
         ORDER BY r.remind_at`

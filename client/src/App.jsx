@@ -97,9 +97,9 @@ export default function App() {
     [reminders]
   );
 
-  const addReminder = async (note_id, remind_at, repeat = 'none') => {
+  const addReminder = async (note_id, remind_at, repeat = 'none', label = '') => {
     try {
-      const r = await api.post('/api/reminders', { note_id, remind_at, repeat });
+      const r = await api.post('/api/reminders', { note_id, remind_at, repeat, label });
       setReminders((prev) => [...prev, r]);
     } catch (err) {
       setError(`Couldn't set reminder: ${err.message}`);
@@ -125,7 +125,7 @@ export default function App() {
 
   const snoozeAlert = (alert, minutes) => {
     dismissAlert(alert.key);
-    addReminder(alert.note_id, new Date(Date.now() + minutes * 60000).toISOString());
+    addReminder(alert.note_id, new Date(Date.now() + minutes * 60000).toISOString(), 'none', alert.label || '');
   };
 
   // One lowercase string per note holding everything searchable
@@ -309,16 +309,51 @@ export default function App() {
     if (filter === id) setFilter('all');
   };
 
+  const updateGroup = async (id, changes) => {
+    setGroups((prev) =>
+      prev.map((g) => (g.id === id ? { ...g, ...changes } : g)).sort(byPosition)
+    );
+    try {
+      await api.patch(`/api/groups/${id}`, changes);
+    } catch (err) {
+      setError(`Couldn't save group: ${err.message}`);
+    }
+  };
+
+  const reorderGroup = (activeKey, overKey) => {
+    const from = groups.findIndex((g) => `gsort:${g.id}` === activeKey);
+    const to = groups.findIndex((g) => `gsort:${g.id}` === overKey);
+    if (from < 0 || to < 0 || from === to) return;
+
+    const moved = arrayMove(groups, from, to);
+    const before = moved[to - 1];
+    const after = moved[to + 1];
+    const position =
+      before && after ? (before.position + after.position) / 2
+      : before ? before.position + 1
+      : after.position - 1;
+
+    updateGroup(groups[from].id, { position });
+  };
+
   // ---------- drag and drop ----------
 
   const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 6 } }));
 
   const collisionDetection = (args) => {
+    // Dragging a group: only other group rows count
+    if (String(args.active.id).startsWith('gsort:')) {
+      return closestCenter({
+        ...args,
+        droppableContainers: args.droppableContainers.filter((c) => String(c.id).startsWith('gsort:')),
+      });
+    }
+    // Dragging a note: a group/trash under the pointer wins, otherwise the nearest note
     const hits = pointerWithin(args).filter((c) => isTarget(c.id));
     if (hits.length) return hits;
     return closestCenter({
       ...args,
-      droppableContainers: args.droppableContainers.filter((c) => !isTarget(c.id)),
+      droppableContainers: args.droppableContainers.filter((c) => typeof c.id === 'number'),
     });
   };
 
@@ -335,6 +370,12 @@ export default function App() {
   };
 
   const handleDragEnd = ({ active, over }) => {
+    if (String(active.id).startsWith('gsort:')) {
+      setDraggingId(null);
+      setOverTarget(null);
+      if (over && String(over.id).startsWith('gsort:')) reorderGroup(active.id, over.id);
+      return;
+    }
     setDraggingId(null);
     // After a toss, overTarget stays 'trash' so the flying note keeps its small
     // size; it is reset when the next drag starts.
@@ -415,7 +456,8 @@ export default function App() {
           onFilter={setFilter}
           onAddGroup={addGroup}
           onDeleteGroup={deleteGroup}
-          dragging={draggingId !== null}
+          dragging={draggingId !== null && !String(draggingId).startsWith('gsort:')}
+          onUpdateGroup={updateGroup}
           slam={thrownId !== null}
           update={updater}
         />

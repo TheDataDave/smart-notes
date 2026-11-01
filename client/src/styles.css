@@ -511,3 +511,110 @@ input[type="datetime-local"]::-webkit-calendar-picker-indicator:hover { backgrou
 }
 @keyframes bob { 0%, 100% { transform: rotate(-4deg) translateY(0); } 50% { transform: rotate(4deg) translateY(-10px); } }
 @keyframes fade-in { from { opacity: 0; } }
+
+/* ---------- editor layout fix ---------- */
+.editor { flex-direction: column; }
+.paper { flex: 1 0 auto; }            /* grow with content, never squash it */
+.paper > * { flex-shrink: 0; }
+.body-wrap { flex: 1 0 auto; }
+.paper-footer { margin-top: auto; padding-top: 1.25rem; }
+
+/* ---------- checklists ---------- */
+.body-wrap .body-input { flex: 0 0 auto; overflow: hidden; }
+.text-line { min-height: 2rem; }
+.check-line { display: flex; align-items: flex-start; gap: .6rem; min-height: 2rem; }
+.check-text { flex: 1; min-width: 0; word-break: break-word; }
+
+.sub-check {
+  flex-shrink: 0; width: 22px; height: 22px; margin-top: 5px; padding: 0;
+  display: grid; place-items: center; cursor: pointer;
+  border: 2px solid var(--ink); border-radius: 7px; background: #fff;
+  box-shadow: 0 2px 0 var(--ink);
+  transition: background .2s, transform .15s, box-shadow .15s;
+}
+.sub-check:hover { transform: translateY(-1px); box-shadow: 0 3px 0 var(--ink); }
+.sub-check svg {
+  width: 14px; height: 14px; fill: none; stroke: #fff; stroke-width: 3.5;
+  stroke-linecap: round; stroke-linejoin: round;
+  stroke-dasharray: 24; stroke-dashoffset: 24; transition: stroke-dashoffset .3s .05s ease-out;
+}
+.sub-check.on { background: #20c997; animation: pop .4s cubic-bezier(.3, 1.8, .5, 1); }
+.sub-check.on svg { stroke-dashoffset: 0; }
+
+.check-line.done .check-text,
+.check-line.done .mention,
+.check-line.done .date-chip { text-decoration: line-through; text-decoration-thickness: 2px; opacity: .55; }
+
+.body-tools { margin-top: .5rem; }
+.body-tools button {
+  border: 2px dashed rgba(0, 0, 0, .3); border-radius: 999px; background: none;
+  padding: .15rem .8rem; font-size: .8rem; font-weight: 700; color: rgba(0, 0, 0, .6);
+}
+.body-tools button:hover { border-color: var(--ink); color: var(--ink); background: rgba(255, 255, 255, .5); }
+
+.sticky-progress {
+  display: flex; align-items: center; gap: .4rem; margin-top: auto;
+  font-size: .7rem; font-weight: 700; color: rgba(0, 0, 0, .6);
+}
+.sticky-progress i { flex: 1; height: 6px; border-radius: 99px; background: rgba(0, 0, 0, .14); overflow: hidden; }
+.sticky-progress b { display: block; height: 100%; width: var(--p); background: #20c997; transition: width .3s; }
+.sticky-progress ~ .sticky-due { margin-top: 0; }
+
+/* ---------- smart dates ---------- */
+.date-chip {
+  display: inline-block; font: inherit; font-weight: 700; line-height: 1.6;
+  padding: 0 .5rem; border: 2px dashed var(--ink); border-radius: 999px;
+  background: rgba(255, 255, 255, .55); color: var(--ink); cursor: pointer;
+  transition: transform .12s, background .12s;
+}
+.date-chip:hover { transform: translateY(-2px); background: #fff3bf; }
+.date-chip.has { border-style: solid; background: #d3f9d8; }
+.date-chip.past { opacity: .55; }
+
+.date-prompt {
+  position: fixed; z-index: 2501; width: 320px; padding: .9rem;
+  background: #fff; color: var(--ink); border: 2px solid var(--ink); border-radius: 1rem;
+  box-shadow: 0 5px 0 var(--ink); animation: rise-in .15s ease-out;
+}
+.dp-label { font-size: .8rem; color: #6c6a78; margin-bottom: .5rem; word-break: break-word; }
+.dp-hint { font-size: .75rem; color: #6c6a78; margin: .35rem 0 .6rem; }
+.dp-actions { display: flex; flex-wrap: wrap; gap: .4rem; }
+.dp-actions button {
+  border: 2px solid var(--ink); border-radius: 999px; background: #fff;
+  padding: .2rem .7rem; font-size: .78rem; font-weight: 700; box-shadow: 0 2px 0 var(--ink);
+}
+.dp-actions button:hover:not(:disabled) { transform: translateY(-1px); }
+.dp-actions button:disabled { opacity: .4; box-shadow: none; }
+.dp-actions .primary { background: #ffd43b; }
+.rem-label { color: #6c6a78; font-weight: 500; max-width: 220px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
+/* ---------- group settings ---------- */
+.grip { cursor: grab; color: #7c76ad; font-size: .9rem; line-height: 1; padding: 0 .1rem; touch-action: none; user-select: none; }
+.grip:hover { color: #fff; }
+.gs-backdrop { position: fixed; inset: 0; z-index: 2500; }
+.gs-pop {
+  position: fixed; z-index: 2501; width: 270px; padding: .9rem;
+  background: #fff; color: var(--ink); border: 2px solid var(--ink); border-radius: 1rem;
+  box-shadow: 0 5px 0 var(--ink); animation: rise-in .15s ease-out;
+}
+.gs-pop h6 { font: 700 1rem var(--hand); margin-bottom: .6rem; }
+.gs-name {
+  width: 100%; padding: .3rem .7rem; font-weight: 600; outline: 0;
+  border: 2px solid var(--ink); border-radius: .7rem; box-shadow: 0 3px 0 var(--ink);
+}
+.swatches { display: flex; flex-wrap: wrap; gap: .5rem; margin: .9rem 0; }
+.swatch {
+  position: relative; width: 28px; height: 28px; padding: 0; border-radius: 50%;
+  border: 2px solid var(--ink); box-shadow: 0 2px 0 var(--ink);
+  transition: transform .12s;
+}
+.swatch:hover { transform: translateY(-2px) scale(1.1); }
+.swatch.on { outline: 3px solid var(--ink); outline-offset: 2px; }
+.swatch-custom { display: grid; place-items: center; background: #fff; font-weight: 800; cursor: pointer; }
+.swatch-custom input { position: absolute; inset: 0; opacity: 0; cursor: pointer; }
+.gs-delete { border: 0; background: none; color: #c92a2a; font-weight: 700; font-size: .85rem; padding: 0; }
+.gs-delete:hover { text-decoration: underline; }
+.gs-confirm { display: flex; flex-wrap: wrap; align-items: center; gap: .4rem; font-size: .8rem; }
+.gs-confirm span { flex-basis: 100%; }
+.gs-confirm button { border: 2px solid var(--ink); border-radius: 999px; background: #fff; padding: .15rem .7rem; font-size: .78rem; font-weight: 700; }
+.gs-confirm .gs-danger { background: #ff6b6b; color: #fff; }

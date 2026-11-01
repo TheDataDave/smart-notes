@@ -224,13 +224,21 @@ function createTray() {
   tray.on('click', showWindow);
 }
 
+// Notes store @[Title](12) and [ ] markers; show them as plain text
+const plain = (s) =>
+  (s || '')
+    .replace(/@\[([^\]]*)\]\(\d+\)/g, '@$1')
+    .replace(/\[[ xX]\]\s?/g, '')
+    .replace(/\s+/g, ' ')
+    .trim();
+
 function handleReminder(r) {
   const win = mainWindow && !mainWindow.isDestroyed() ? mainWindow : null;
 
   if (Notification.isSupported()) {
     const n = new Notification({
       title: r.title || 'Reminder',
-      body: r.body ? r.body.slice(0, 120) : 'Your reminder is due.',
+      body: r.label || plain(r.body).slice(0, 120) || 'Your reminder is due.',
     });
     liveNotifications.add(n);
     n.on('click', () => {

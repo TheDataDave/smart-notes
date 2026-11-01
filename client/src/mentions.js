@@ -111,3 +111,7 @@ export const tagOf = (label, note) =>
 // A short preview of a note's body, with mentions flattened to plain text
 export const snippet = (note) =>
   note.body.replace(TOKEN, '@$1').replace(/\s+/g, ' ').trim().slice(0, 50);
+
+// Plain text of a stored line: mentions flattened to "@Title"
+export const plainText = (stored) =>
+  stored.replace(TOKEN, '@$1').replace(/\s+/g, ' ').trim();

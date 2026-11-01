@@ -101,13 +101,19 @@ export default function Editor({
         <BodyField
           body={body}
           notes={notes}
-          selfId={note.id}
           groups={groups}
+          reminders={reminders}
+          selfId={note.id}
           onChange={(stored) => {
             setBody(stored);
             queueSave({ body: stored });
           }}
           onOpenNote={onOpenNote}
+          onRemind={(iso, label) => onAddReminder(note.id, iso, 'none', label)}
+          onSetDue={(iso) => {
+            onSave(note.id, { due_at: iso });
+            setDue(safeFormat(iso, "yyyy-MM-dd'T'HH:mm"));
+          }}
         />
 
         <LinkPanel connections={connections} onOpen={onOpenNote} />

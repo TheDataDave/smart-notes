@@ -1,4 +1,5 @@
 import { safeFormat } from '../dates';
+import { progress } from '../checklist';
 
 const ICONS = { note: '📝', task: '✅', event: '📅' };
 
@@ -7,6 +8,7 @@ export default function StickyNote({
 }) {
   // A steady "random" tilt from the id: always between -1.8deg and +1.8deg
   const tilt = (((note.id * 37) % 7) - 3) * 0.6;
+  const prog = progress(note.body || '');
 
   return (
     <div
@@ -40,6 +42,13 @@ export default function StickyNote({
       </div>
 
       <div className="sticky-title">{note.title || 'Untitled'}</div>
+
+      {prog.total > 0 && !compact && (
+        <div className="sticky-progress" title={`${prog.done} of ${prog.total} steps done`}>
+          <i><b style={{ '--p': `${(prog.done / prog.total) * 100}%` }} /></i>
+          <span>{prog.done}/{prog.total}</span>
+        </div>
+      )}
 
       {note.due_at && !compact && (
         <div className="sticky-due">{safeFormat(note.due_at, 'EEE, MMM d · h:mm a')}</div>

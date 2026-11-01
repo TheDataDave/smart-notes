@@ -2,7 +2,7 @@ import confetti from 'canvas-confetti';
 
 const COLORS = ['#ff6b6b', '#ffa94d', '#ffd43b', '#51cf66', '#339af0', '#cc5de8'];
 
-export function celebrate(rect) {
+export function celebrate(rect, { small = false } = {}) {
   const origin = rect
     ? {
         x: (rect.left + rect.width / 2) / window.innerWidth,
@@ -11,6 +11,12 @@ export function celebrate(rect) {
     : { x: 0.5, y: 0.6 };
 
   const base = { origin, colors: COLORS, zIndex: 3000, disableForReducedMotion: true };
+
+  if (small) {
+    confetti({ ...base, particleCount: 26, spread: 60, startVelocity: 26, scalar: 0.8, ticks: 120 });
+    confetti({ ...base, particleCount: 6, spread: 90, startVelocity: 16, shapes: ['star'], scalar: 1.1 });
+    return;
+  }
 
   confetti({ ...base, particleCount: 80, spread: 80, startVelocity: 42, ticks: 200 });
   confetti({ ...base, particleCount: 24, spread: 120, startVelocity: 26, shapes: ['star'], scalar: 1.3 });

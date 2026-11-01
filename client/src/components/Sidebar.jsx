@@ -1,9 +1,12 @@
 import { useState } from 'react';
 import { Badge, Form } from 'react-bootstrap';
 import { useDroppable } from '@dnd-kit/core';
+import { SortableContext, useSortable, verticalListSortingStrategy } from '@dnd-kit/sortable';
+import { CSS } from '@dnd-kit/utilities';
 import TrashCan from './TrashCan';
+import GroupSettings from './GroupSettings';
 
-function Item({ id, dropId, label, color, total, active, dragging, onSelect, onRemove }) {
+function Item({ id, dropId, label, color, total, active, dragging, onSelect, onSettings, grip }) {
   const { setNodeRef, isOver } = useDroppable({
     id: dropId ?? `nodrop:${id}`,
     disabled: !dropId,
@@ -15,28 +18,72 @@ function Item({ id, dropId, label, color, total, active, dragging, onSelect, onR
       className={`side-item ${active ? 'active' : ''} ${dragging && dropId ? 'drop-ready' : ''} ${isOver ? 'drop-over' : ''}`}
       onClick={() => onSelect(id)}
     >
+      {grip}
       <span className="dot" style={{ background: color || '#adb5bd' }} />
       <span className="flex-grow-1 text-truncate">{label}</span>
       <Badge bg="light" text="dark" pill>{total}</Badge>
-      {onRemove && (
+      {onSettings && (
         <button
           className="btn-x"
-          title="Delete group"
+          title="Group settings"
           onClick={(e) => {
             e.stopPropagation();
-            onRemove();
+            onSettings(e.currentTarget.getBoundingClientRect());
           }}
         >
-          ×
+          ⚙
         </button>
       )}
     </div>
   );
 }
 
-export default function Sidebar({ groups, notes, filter, onFilter, onAddGroup, onDeleteGroup, dragging, slam, update }) {
+// One group row that can be dragged up and down. Only the ⠿ handle starts the drag,
+// so clicking the row still selects it.
+function SortableGroup({ group, ...props }) {
+  const { attributes, listeners, setNodeRef, setActivatorNodeRef, transform, transition, isDragging } =
+    useSortable({ id: `gsort:${group.id}` });
+
+  return (
+    <div
+      ref={setNodeRef}
+      style={{
+        transform: CSS.Transform.toString(transform),
+        transition,
+        opacity: isDragging ? 0.7 : 1,
+        position: 'relative',
+        zIndex: isDragging ? 5 : 'auto',
+      }}
+    >
+      <Item
+        {...props}
+        id={group.id}
+        dropId={`group:${group.id}`}
+        label={group.name}
+        color={group.color}
+        grip={
+          <span
+            ref={setActivatorNodeRef}
+            className="grip"
+            title="Drag to reorder"
+            {...attributes}
+            {...listeners}
+          >
+            ⠿
+          </span>
+        }
+      />
+    </div>
+  );
+}
+
+export default function Sidebar({
+  groups, notes, filter, onFilter, onAddGroup, onUpdateGroup, onDeleteGroup, dragging, slam, update,
+}) {
   const [name, setName] = useState('');
+  const [settings, setSettings] = useState(null); // { id, rect }
   const count = (test) => notes.filter(test).length;
+  const editing = settings && groups.find((g) => g.id === settings.id);
 
   const submit = (e) => {
     e.preventDefault();
@@ -51,25 +98,24 @@ export default function Sidebar({ groups, notes, filter, onFilter, onAddGroup, o
 
       <Item id="all" label="All notes" total={notes.length}
             active={filter === 'all'} onSelect={onFilter} />
-      <Item id="none" dropId="group:none" label="Ungrouped"
+      <Item id="none" dropId="group:none" dragging={dragging} label="Ungrouped"
             total={count((n) => n.group_id == null)}
-            active={filter === 'none'} onSelect={onFilter} dragging={dragging} />
+            active={filter === 'none'} onSelect={onFilter} />
 
       <div className="side-heading">Groups</div>
-      {groups.map((g) => (
-        <Item
-          key={g.id}
-          id={g.id}
-          dropId={`group:${g.id}`}
-          label={g.name}
-          color={g.color}
-          total={count((n) => n.group_id === g.id)}
-          active={filter === g.id}
-          onSelect={onFilter}
-          onRemove={() => onDeleteGroup(g.id)}
-          dragging={dragging}
-        />
-      ))}
+      <SortableContext items={groups.map((g) => `gsort:${g.id}`)} strategy={verticalListSortingStrategy}>
+        {groups.map((g) => (
+          <SortableGroup
+            key={g.id}
+            group={g}
+            dragging={dragging}
+            total={count((n) => n.group_id === g.id)}
+            active={filter === g.id}
+            onSelect={onFilter}
+            onSettings={(rect) => setSettings({ id: g.id, rect })}
+          />
+        ))}
+      </SortableContext>
 
       <Form onSubmit={submit} className="p-3">
         <div className="group-add">
@@ -81,7 +127,9 @@ export default function Sidebar({ groups, notes, filter, onFilter, onAddGroup, o
           <button type="submit" className="add-btn">Add</button>
         </div>
       </Form>
+
       <TrashCan dragging={dragging} slam={slam} />
+
       {update.state.currentVersion && (
         <div className="version-line">
           <span>v{update.state.currentVersion}</span>
@@ -96,6 +144,19 @@ export default function Sidebar({ groups, notes, filter, onFilter, onAddGroup, o
             </button>
           )}
         </div>
+      )}
+
+      {editing && (
+        <GroupSettings
+          group={editing}
+          rect={settings.rect}
+          onSave={onUpdateGroup}
+          onDelete={(id) => {
+            setSettings(null);
+            onDeleteGroup(id);
+          }}
+          onClose={() => setSettings(null)}
+        />
       )}
     </aside>
   );

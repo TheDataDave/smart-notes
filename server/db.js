@@ -60,6 +60,9 @@ const MIGRATIONS = [
                          OR (to_type   = 'reminder' AND to_id   = OLD.id);
   END;
   `,
+  `
+  ALTER TABLE reminders ADD COLUMN label TEXT NOT NULL DEFAULT '';
+  `,
 ];
 
 export function openDb(file) {

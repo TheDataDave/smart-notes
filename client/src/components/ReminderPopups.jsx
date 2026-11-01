@@ -8,7 +8,7 @@ export default function ReminderPopups({ alerts, onOpen, onSnooze, onDismiss }) 
           <div className="reminder-bell">🔔</div>
           <div className="reminder-text">
             <div className="reminder-head">{a.title || 'Untitled'}</div>
-            <div className="reminder-sub">Reminder is due</div>
+            <div className="reminder-sub">{a.label || 'Reminder is due'}</div>
             <div className="reminder-actions">
               <button className="primary" onClick={() => onOpen(a)}>Open</button>
               <button onClick={() => onSnooze(a, 10)}>+10 min</button>
