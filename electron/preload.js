@@ -11,4 +11,8 @@ contextBridge.exposeInMainWorld('desktop', {
   platform: process.platform,
   onReminderFired: (cb) => listen('reminder:fired', cb),
   onOpenNote: (cb) => listen('reminder:open', cb),
+  getUpdateState: () => ipcRenderer.invoke('updater:get-state'),
+  onUpdateState: (cb) => listen('updater:state', cb),
+  checkForUpdates: () => ipcRenderer.invoke('updater:check'),
+  installUpdate: () => ipcRenderer.invoke('updater:install'),
 });

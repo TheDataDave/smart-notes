@@ -14,6 +14,8 @@ import Editor from './components/Editor';
 import StickyNote from './components/StickyNote';
 import ReminderPopups from './components/ReminderPopups';
 import { mentionIds } from './mentions';
+import { useUpdater } from './useUpdater';
+import UpdateBanner from './components/UpdateBanner';
 
 const COLORS = ['#6f42c1', '#d63384', '#fd7e14', '#20c997', '#0d6efd', '#ffc107'];
 const byPosition = (a, b) => a.position - b.position || a.id - b.id;
@@ -49,6 +51,7 @@ export default function App() {
   const [links, setLinks] = useState([]);
   const [trail, setTrail] = useState([]); // notes you jumped away from, for the Back button
   const pending = useRef(null);                       // { note, timer }
+  const updater = useUpdater();
 
   useEffect(() => {
     Promise.all([
@@ -382,6 +385,7 @@ export default function App() {
           onDeleteGroup={deleteGroup}
           dragging={draggingId !== null}
           slam={thrownId !== null}
+          update={updater}
         />
         <NoteList
           notes={visibleNotes}
@@ -428,7 +432,7 @@ export default function App() {
         onSnooze={snoozeAlert}
         onDismiss={dismissAlert}
       />
-
+      <UpdateBanner state={updater.state} onInstall={updater.install} />
       <DragOverlay
         modifiers={overTarget === 'group' ? [nearCursor] : undefined}
         dropAnimation={overTarget === 'trash' ? trashDrop : undefined}

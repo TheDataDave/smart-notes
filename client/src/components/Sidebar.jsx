@@ -34,7 +34,7 @@ function Item({ id, dropId, label, color, total, active, dragging, onSelect, onR
   );
 }
 
-export default function Sidebar({ groups, notes, filter, onFilter, onAddGroup, onDeleteGroup, dragging, slam }) {
+export default function Sidebar({ groups, notes, filter, onFilter, onAddGroup, onDeleteGroup, dragging, slam, update }) {
   const [name, setName] = useState('');
   const count = (test) => notes.filter(test).length;
 
@@ -82,6 +82,21 @@ export default function Sidebar({ groups, notes, filter, onFilter, onAddGroup, o
         </div>
       </Form>
       <TrashCan dragging={dragging} slam={slam} />
+      {update.state.currentVersion && (
+        <div className="version-line">
+          <span>v{update.state.currentVersion}</span>
+          {update.state.status === 'ready' ? (
+            <button onClick={update.install}>Restart to update</button>
+          ) : (
+            <button
+              onClick={update.check}
+              disabled={['checking', 'downloading'].includes(update.state.status)}
+            >
+              Check for updates
+            </button>
+          )}
+        </div>
+      )}
     </aside>
   );
 }
