@@ -13,7 +13,7 @@ import NoteList from './components/NoteList';
 import Editor from './components/Editor';
 import StickyNote from './components/StickyNote';
 import ReminderPopups from './components/ReminderPopups';
-import { mentionIds } from './mentions';
+import { buildLabels, mentionIds, toDisplay } from './mentions';
 import { useUpdater } from './useUpdater';
 import UpdateBanner from './components/UpdateBanner';
 
@@ -50,6 +50,8 @@ export default function App() {
   const [alerts, setAlerts] = useState([]);
   const [links, setLinks] = useState([]);
   const [trail, setTrail] = useState([]); // notes you jumped away from, for the Back button
+  const [query, setQuery] = useState('');
+  const searchRef = useRef(null);
   const pending = useRef(null);                       // { note, timer }
   const updater = useUpdater();
 
@@ -126,19 +128,46 @@ export default function App() {
     addReminder(alert.note_id, new Date(Date.now() + minutes * 60000).toISOString());
   };
 
+  // One lowercase string per note holding everything searchable
+  const searchIndex = useMemo(() => {
+    const labels = buildLabels(notes);
+    const groupName = new Map(groups.map((g) => [g.id, g.name]));
+    return new Map(
+      notes.map((n) => [
+        n.id,
+        [n.title, toDisplay(n.body, labels).text, groupName.get(n.group_id) || '', n.kind]
+          .join('\n')
+          .toLowerCase(),
+      ])
+    );
+  }, [notes, groups]);
+
   // Open notes first, completed ones at the end (after a short celebration delay)
-  const visibleNotes = useMemo(
-    () =>
-      notes
-        .filter((n) =>
-          filter === 'all' ? true : filter === 'none' ? n.group_id == null : n.group_id === filter
-        )
-        .sort((a, b) => {
-          const sunk = (n) => (n.completed && !settling.includes(n.id) ? 1 : 0);
-          return sunk(a) - sunk(b) || byPosition(a, b);
-        }),
-    [notes, filter, settling]
-  );
+  const visibleNotes = useMemo(() => {
+    const words = query.toLowerCase().split(/\s+/).filter(Boolean);
+    return notes
+      .filter((n) => {
+        if (words.length) return words.every((w) => searchIndex.get(n.id)?.includes(w));
+        return filter === 'all' ? true : filter === 'none' ? n.group_id == null : n.group_id === filter;
+      })
+      .sort((a, b) => {
+        const sunk = (n) => (n.completed && !settling.includes(n.id) ? 1 : 0);
+        return sunk(a) - sunk(b) || byPosition(a, b);
+      });
+  }, [notes, filter, settling, query, searchIndex]);
+
+  // Keyboard shortcut for searching notes
+  useEffect(() => {
+    const onKey = (e) => {
+      if ((e.ctrlKey || e.metaKey) && ['k', 'f'].includes(e.key.toLowerCase())) {
+        e.preventDefault();
+        searchRef.current?.focus();
+        searchRef.current?.select();
+      }
+    };
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, []);
 
   const selected = notes.find((n) => n.id === selectedId) || null;
   const selectedColor = groups.find((g) => g.id === selected?.group_id)?.color;
@@ -147,9 +176,11 @@ export default function App() {
   const openNote = (id) => {
     const n = notes.find((x) => x.id === id);
     if (!n) return;
-    const visible =
-      filter === 'all' || (filter === 'none' ? n.group_id == null : n.group_id === filter);
-    if (!visible) setFilter('all'); // make sure its sticky is on the board
+    // If its sticky isn't on the board right now, clear the filter and search
+    if (!visibleNotes.some((x) => x.id === id)) {
+      setFilter('all');
+      setQuery('');
+    }
     if (selectedId !== null && selectedId !== id) setTrail((t) => [...t.slice(-19), selectedId]);
     setSelectedId(id);
   };
@@ -181,6 +212,7 @@ export default function App() {
         title: '',
         group_id: typeof filter === 'number' ? filter : null,
       });
+      setQuery('');
       setNotes((prev) => [...prev, note]);
       setSelectedId(note.id);
     } catch (err) {
@@ -396,6 +428,9 @@ export default function App() {
           onAdd={addNote}
           onToggle={toggleComplete}
           bellIds={bellIds}
+          query={query}
+          onQuery={setQuery}
+          searchRef={searchRef}
         />
         {selected ? (
           <Editor

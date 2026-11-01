@@ -102,6 +102,7 @@ export default function Editor({
           body={body}
           notes={notes}
           selfId={note.id}
+          groups={groups}
           onChange={(stored) => {
             setBody(stored);
             queueSave({ body: stored });

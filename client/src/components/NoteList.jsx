@@ -55,18 +55,47 @@ function SortableNote({ note, ...rest }) {
 }
 
 export default function NoteList({
-  notes, groups, selectedId, thrownId, bellIds, onSelect, onAdd, onToggle,
+  notes, groups, selectedId, thrownId, bellIds, query, onQuery, searchRef,
+  onSelect, onAdd, onToggle,
 }) {
   const colorOf = (groupId) => groups.find((g) => g.id === groupId)?.color;
+  const searching = query.trim() !== '';
 
   return (
     <section className="board">
       <div className="board-head">
-        <h6 className="mb-0">{notes.length} {notes.length === 1 ? 'sticky' : 'stickies'}</h6>
-        <div className="d-flex gap-2">
-          <button className="add-btn" onClick={() => onAdd('note')}>+ Note</button>
-          <button className="add-btn task" onClick={() => onAdd('task')}>+ Task</button>
-          <button className="add-btn event" onClick={() => onAdd('event')}>+ Event</button>
+        <div className="board-head-row">
+          <h6 className="mb-0">
+            {searching
+              ? `${notes.length} found`
+              : `${notes.length} ${notes.length === 1 ? 'sticky' : 'stickies'}`}
+          </h6>
+          <div className="d-flex gap-2">
+            <button className="add-btn" onClick={() => onAdd('note')}>+ Note</button>
+            <button className="add-btn task" onClick={() => onAdd('task')}>+ Task</button>
+            <button className="add-btn event" onClick={() => onAdd('event')}>+ Event</button>
+          </div>
+        </div>
+
+        <div className="search-box">
+          <span aria-hidden="true">🔍</span>
+          <input
+            ref={searchRef}
+            value={query}
+            placeholder="Search all notes...  (Ctrl+K)"
+            onChange={(e) => onQuery(e.target.value)}
+            onKeyDown={(e) => {
+              if (e.key === 'Escape') {
+                onQuery('');
+                e.currentTarget.blur();
+              } else if (e.key === 'Enter' && notes[0]) {
+                onSelect(notes[0].id);
+              }
+            }}
+          />
+          {query && (
+            <button aria-label="Clear search" onClick={() => onQuery('')}>×</button>
+          )}
         </div>
       </div>
 
@@ -79,15 +108,19 @@ export default function NoteList({
               color={colorOf(n.group_id)}
               active={n.id === selectedId}
               thrown={n.id === thrownId}
+              bell={bellIds?.has(n.id)}
               onSelect={onSelect}
               onToggle={onToggle}
-              bell={bellIds?.has(n.id)}
             />
           ))}
         </div>
       </SortableContext>
 
-      {notes.length === 0 && <p className="board-empty">Nothing stuck here yet.</p>}
+      {notes.length === 0 && (
+        <p className="board-empty">
+          {searching ? `No stickies match “${query.trim()}”.` : 'Nothing stuck here yet.'}
+        </p>
+      )}
     </section>
   );
 }

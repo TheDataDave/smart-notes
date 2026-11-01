@@ -1,18 +1,32 @@
 import { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
-import { cleanTitle, findTrigger, splitBody, toDisplay, toStored } from '../mentions';
+import { safeFormat } from '../dates';
+import {
+  buildLabels, cleanTitle, findTrigger, snippet, splitBody, tagOf, toDisplay, toStored,
+} from '../mentions';
 
-export default function BodyField({ body, notes, selfId, onChange, onOpenNote }) {
+const ICONS = { note: '📝', task: '✅', event: '📅' };
+
+export default function BodyField({ body, notes, groups, selfId, onChange, onOpenNote }) {
   const [editing, setEditing] = useState(false);
   const [text, setText] = useState('');
   const [menu, setMenu] = useState(null); // { start, items, index }
-  const mentions = useRef(new Map());     // "@Name" -> note id, for this editing session
+  const mentions = useRef(new Map());     // "Label" -> note id, for this editing session
   const area = useRef(null);
   const caretTo = useRef(null);
 
   const notesById = useMemo(() => new Map(notes.map((n) => [n.id, n])), [notes]);
+  const labels = useMemo(() => buildLabels(notes), [notes]);
+
+  // Group, due date and the start of the body: enough to tell look-alikes apart
+  const details = (n) =>
+    [
+      groups.find((g) => g.id === n.group_id)?.name,
+      safeFormat(n.due_at, 'MMM d'),
+      snippet(n),
+    ].filter(Boolean).join(' · ');
 
   const startEditing = () => {
-    const { text, map } = toDisplay(body, notesById);
+    const { text, map } = toDisplay(body, labels);
     mentions.current = map;
     setText(text);
     setEditing(true);
@@ -40,10 +54,10 @@ export default function BodyField({ body, notes, selfId, onChange, onOpenNote })
     if (!trigger) return setMenu(null);
     const q = trigger.query.toLowerCase();
     const items = notes
-      .filter((n) => n.id !== selfId && cleanTitle(n).toLowerCase().includes(q))
+      .filter((n) => n.id !== selfId && labels.get(n.id).toLowerCase().includes(q))
       .sort((a, b) => {
-        const rank = (n) => (cleanTitle(n).toLowerCase().startsWith(q) ? 0 : 1);
-        return rank(a) - rank(b) || cleanTitle(a).localeCompare(cleanTitle(b));
+        const rank = (n) => (labels.get(n.id).toLowerCase().startsWith(q) ? 0 : 1);
+        return rank(a) - rank(b) || labels.get(a.id).localeCompare(labels.get(b.id));
       })
       .slice(0, 6);
     setMenu(items.length ? { start: trigger.start, items, index: 0 } : null);
@@ -57,7 +71,7 @@ export default function BodyField({ body, notes, selfId, onChange, onOpenNote })
   };
 
   const pick = (note) => {
-    const name = cleanTitle(note);
+    const name = labels.get(note.id); // unique, so two notes can never share an entry
     mentions.current.set(name, note.id);
     const caret = area.current.selectionStart;
     const next = text.slice(0, menu.start) + '@' + name + ' ' + text.slice(caret);
@@ -93,21 +107,27 @@ export default function BodyField({ body, notes, selfId, onChange, onOpenNote })
           {parts.map((p, i) => {
             if (!p.mention) return <span key={i}>{p.text}</span>;
             const note = notesById.get(p.id);
-            return note ? (
+            if (!note) {
+              return (
+                <span key={i} className="mention broken" title="This note was deleted">
+                  @{p.title}
+                </span>
+              );
+            }
+            const tag = tagOf(labels.get(note.id), note);
+            return (
               <button
                 key={i}
                 className="mention"
+                title={`${ICONS[note.kind]} ${details(note)}`}
                 onClick={(e) => {
                   e.stopPropagation();
                   onOpenNote(p.id);
                 }}
               >
                 @{cleanTitle(note)}
+                {tag && <small className="mention-tag">{tag}</small>}
               </button>
-            ) : (
-              <span key={i} className="mention broken" title="This note was deleted">
-                @{p.title}
-              </span>
             );
           })}
         </div>
@@ -137,19 +157,26 @@ export default function BodyField({ body, notes, selfId, onChange, onOpenNote })
       {menu && (
         <div className="mention-menu" onMouseDown={(e) => e.preventDefault()}>
           <div className="mention-hint">↑↓ to choose · Enter to link · Esc to cancel</div>
-          {menu.items.map((n, i) => (
-            <div
-              key={n.id}
-              className={`mention-item ${i === menu.index ? 'on' : ''}`}
-              onMouseDown={(e) => {
-                e.preventDefault();
-                pick(n);
-              }}
-            >
-              <span>{{ note: '📝', task: '✅', event: '📅' }[n.kind]}</span>
-              <span className="text-truncate">{cleanTitle(n)}</span>
-            </div>
-          ))}
+          {menu.items.map((n, i) => {
+            const tag = tagOf(labels.get(n.id), n);
+            return (
+              <div
+                key={n.id}
+                className={`mention-item ${i === menu.index ? 'on' : ''}`}
+                onMouseDown={(e) => {
+                  e.preventDefault();
+                  pick(n);
+                }}
+              >
+                <span>{ICONS[n.kind]}</span>
+                <span className="mi-main">
+                  <span className="text-truncate">{cleanTitle(n)}</span>
+                  <span className="mi-sub text-truncate">{details(n) || 'Empty note'}</span>
+                </span>
+                {tag && <span className="mi-tag">{tag}</span>}
+              </div>
+            );
+          })}
         </div>
       )}
     </div>
