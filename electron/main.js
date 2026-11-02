@@ -1,4 +1,4 @@
-const { app, BrowserWindow, shell, Notification, Tray, Menu, ipcMain } = require('electron');
+const { app, BrowserWindow, shell, Notification, Tray, Menu, ipcMain, dialog } = require('electron');
 const { makeTrayIcon } = require('./trayIcon');
 const path = require('node:path');
 const fs = require('node:fs');
@@ -12,11 +12,44 @@ let mainWindow;
 let tray;
 let quitting = false;   // true once the user really wants out
 let hintShown = false;  // only explain "still running" once per session
+let closePromptOpen = false; // don't stack dialogs if X is clicked repeatedly
 
 // Windows needs an app id or it may not show notifications from an unpackaged app
 app.setAppUserModelId('com.smartnotes.app');
 
 const liveNotifications = new Set(); // keeps them from being garbage-collected before clicked
+
+// ---------- preferences ----------
+
+// What the window's X button does: 'ask' every time, hide to the 'tray', or 'quit'
+const CLOSE_ACTIONS = ['ask', 'tray', 'quit'];
+const prefsPath = () => path.join(app.getPath('userData'), 'preferences.json');
+
+function loadPrefs() {
+  try {
+    return JSON.parse(fs.readFileSync(prefsPath(), 'utf8')) || {};
+  } catch {
+    return {}; // missing or unreadable file: fall back to defaults
+  }
+}
+
+function savePrefs(patch) {
+  try {
+    fs.writeFileSync(prefsPath(), JSON.stringify({ ...loadPrefs(), ...patch }, null, 2));
+  } catch (error) {
+    console.error('[Prefs] Could not save preferences:', error);
+  }
+}
+
+function getCloseAction() {
+  const action = loadPrefs().closeAction;
+  return CLOSE_ACTIONS.includes(action) ? action : 'ask';
+}
+
+function setCloseAction(action) {
+  savePrefs({ closeAction: action });
+  refreshTrayMenu();
+}
 
 // ---------- update state ----------
 
@@ -167,6 +200,49 @@ function showWindow() {
   mainWindow.flashFrame(false);
 }
 
+function hideToTray(showHint) {
+  if (!mainWindow || mainWindow.isDestroyed()) return;
+  mainWindow.hide();
+  if (showHint && !hintShown && Notification.isSupported()) {
+    hintShown = true;
+    new Notification({
+      title: 'Smart Notes is still running',
+      body: 'Reminders will keep firing. Use the tray icon to open or quit.',
+    }).show();
+  }
+}
+
+async function askCloseAction() {
+  if (closePromptOpen || !mainWindow || mainWindow.isDestroyed()) return;
+  closePromptOpen = true;
+  try {
+    const { response, checkboxChecked } = await dialog.showMessageBox(mainWindow, {
+      type: 'question',
+      title: 'Close Smart Notes',
+      message: 'Keep Smart Notes running in the background?',
+      detail:
+        'Smart Notes can keep running in the system tray so your reminders and notifications still go off.\n\n' +
+        'If you quit completely, reminders and notifications may not work as intended until you open the app again.',
+      buttons: ['Keep running in tray', 'Quit Smart Notes', 'Cancel'],
+      defaultId: 0,
+      cancelId: 2,
+      noLink: true,
+      checkboxLabel: "Remember my choice (change it later from the tray icon's menu)",
+      checkboxChecked: false,
+    });
+
+    if (response === 2) return; // Cancel / Esc: leave the window open
+
+    const action = response === 0 ? 'tray' : 'quit';
+    if (checkboxChecked) setCloseAction(action);
+
+    if (action === 'quit') quitApp();
+    else hideToTray(false); // the dialog just explained it, no need for the toast
+  } finally {
+    closePromptOpen = false;
+  }
+}
+
 function quitApp() {
   if (quitting) return;
 
@@ -200,6 +276,16 @@ function buildTrayMenu() {
   items.push({ type: 'separator' });
 
   // "Start at login" only makes sense for the packaged app, not `npm run dev`
+  const closeAction = getCloseAction();
+  items.push({
+    label: 'When I close the window',
+    submenu: [
+      { label: 'Ask me', type: 'radio', checked: closeAction === 'ask', click: () => setCloseAction('ask') },
+      { label: 'Keep running in the tray', type: 'radio', checked: closeAction === 'tray', click: () => setCloseAction('tray') },
+      { label: 'Quit Smart Notes', type: 'radio', checked: closeAction === 'quit', click: () => setCloseAction('quit') },
+    ],
+  });
+
   if (app.isPackaged) {
     items.push({
       label: 'Start when I log in',
@@ -276,18 +362,15 @@ async function createWindow() {
 
   mainWindow.once('ready-to-show', () => mainWindow.show());
 
-  // The X button hides the window; the app keeps running in the tray
+  // The X button either hides to the tray or quits, depending on the user's choice
   mainWindow.on('close', (e) => {
     if (quitting) return;
     e.preventDefault();
-    mainWindow.hide();
-    if (!hintShown && Notification.isSupported()) {
-      hintShown = true;
-      new Notification({
-        title: 'Smart Notes is still running',
-        body: 'Reminders will keep firing. Use the tray icon to open or quit.',
-      }).show();
-    }
+
+    const action = getCloseAction();
+    if (action === 'quit') return quitApp();
+    if (action === 'tray') return hideToTray(true);
+    askCloseAction();
   });
 
   // Open external links in the real browser, not inside our app

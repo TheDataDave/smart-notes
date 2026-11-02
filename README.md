@@ -10,7 +10,7 @@ Smart Notes brings organization to life with vibrant note colors, drag-and-drop 
 - **Drag & Drop** – Freely arrange notes to build your own workspace.
 - **Task Management** – Keep track of tasks and mark them as complete.
 - **Rewarding Animations** – Celebrate completed tasks with confetti and stars.
-- **System Tray Integration** – Keep Smart Notes running in the background.
+- **System Tray Integration** – Closing the window asks whether to keep Smart Notes running in the tray (so reminders keep firing) or quit. Tick "Remember my choice" to skip the prompt; change it any time from the tray menu under "When I close the window".
 - **Automatic Updates** – Receive and install application updates directly through GitHub releases.
 
 ## 🛠️ Built With
